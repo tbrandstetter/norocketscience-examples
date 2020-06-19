@@ -1,0 +1,11 @@
+---
+- name: Provision k3s agent nodes
+  hosts: k3s_agents
+  serial: "{{ serial_number|default(1) }}"
+  remote_user: "{{ ssh_user }}"
+  become: true
+  become_user: root
+
+  roles:
+    - k3s-agent
+    - nfs-client

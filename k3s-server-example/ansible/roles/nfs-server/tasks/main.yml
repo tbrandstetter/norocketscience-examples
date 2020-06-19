@@ -1,0 +1,59 @@
+---
+- name: Install NFS server on Debian or Ubuntu
+  package:
+    name: nfs-kernel-server
+  when: ansible_distribution == "Debian" or
+        ansible_distribution == "Ubuntu"
+
+- name: Install NFS server on CentOS or RedHat
+  package:
+    name: nfs-utils
+  when: ansible_distribution == "CentOS" or
+        ansible_distribution == "RedHat"
+
+- name: Configure NFS storage
+  template:
+    src: "exports.j2"
+    dest: "/etc/exports"
+    owner: root
+    group: root
+    mode: 0644
+
+- name: Change ownership of NFS storage directory
+  file:
+    path: /storage
+    state: directory
+    mode: '1777'
+
+- name: Modprobe NFS modules on docker (Molecule Test only)
+  command:  modprobe {nfs,nfsd,rpcsec_gss_krb5}
+  when: (ansible_distribution == "CentOS" or
+        ansible_distribution == "RedHat") and
+        not run_in_container
+
+- name: Export NFS filesystem
+  command: exportfs -ra
+  changed_when: False
+
+- name: Start the NFS server on Debian or Ubuntu
+  systemd:
+    name: nfs-kernel-server
+    state: started
+    daemon_reload: yes
+    enabled: yes
+  when: ansible_distribution == "Debian" or
+        ansible_distribution == "Ubuntu"
+
+- name: Start the NFS server on CentOS or RedHat
+  systemd:
+    name: "{{ item }}"
+    state: started
+    daemon_reload: yes
+    enabled: yes
+  with_items:
+    - rpcbind
+    - nfs-server
+    - nfs-lock
+    - nfs-idmap
+  when: ansible_distribution == "CentOS" or
+        ansible_distribution == "RedHat"

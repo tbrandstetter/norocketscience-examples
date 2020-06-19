@@ -1,0 +1,10 @@
+---
+- name: Provision k3s server node
+  hosts: k3s_master
+  #serial: "{{ serial_number|default(1) }}"
+  remote_user: "{{ ssh_user }}"
+  become: true
+  become_user: root
+
+  roles:
+    - k3s-master

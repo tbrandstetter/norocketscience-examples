@@ -1,0 +1,74 @@
+{% set my_ip = ansible_default_ipv4.address -%}
+
+## Master node configuration
+{% if ansible_fqdn in groups['k3s_master'] %}
+    {% set router_id = keepalived_router_id_master %}
+    {% set priority = 120 - groups['k3s_master'].index(inventory_hostname) %}
+    {% set virtual_ip = keepalived_ip_master %}
+    {% if priority == ((groups['k3s_master'] | length) - 120) %}
+        {% set mode = "MASTER" %}
+    {% else %}
+        {% set mode = "BACKUP" %}
+    {% endif %}
+
+    {% set peers = [] -%}
+    {% set master_peers = groups['k3s_master'] %}
+
+    {% if groups['k3s_master'] | length > 1 %}
+        {% for host in master_peers -%}
+            {% set other_ip = hostvars[host]['ansible_default_ipv4']['address'] %}
+            {% if my_ip != other_ip %}
+                {% set _ = peers.append(other_ip) -%}
+            {% endif %}
+        {% endfor -%}
+    {% endif %}
+
+## Agent node configuration
+{% else %}
+    {% set router_id = keepalived_router_id_agent %}
+    {% set priority = 220 - groups['k3s_agents'].index(inventory_hostname) %}
+    {% set virtual_ip = keepalived_ip_agent %}
+    {% if priority == ((groups['k3s_master'] | length) - 220) %}
+        {% set mode = "MASTER" %}
+    {% else %}
+        {% set mode = "BACKUP" %}
+    {% endif %}
+
+    {% set peers = [] %}
+    {% set agent_peers = groups['k3s_agents'] %}
+
+    {% if groups['k3s_agents'] | length > 1 %}
+        {% for host in agent_peers %}
+            {% set other_ip = hostvars[host]['ansible_default_ipv4']['address'] %}
+            {% if my_ip != other_ip %}
+                {% set _ = peers.append(other_ip) %}
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+
+{% endif %}
+
+## Final configuration
+vrrp_instance VI_1 {
+    state {{ mode }}
+    interface {{ ansible_default_ipv4.interface }}
+    virtual_router_id {{ router_id }}
+    priority {{ priority }}
+    advert_int 1
+
+    unicast_src_ip {{ my_ip }}
+    unicast_peer {
+    {% for peer in peers %}
+        {{ peer }}
+    {% endfor %}
+    }
+
+    authentication {
+        auth_type PASS
+        auth_pass AsDFDFD!@#123
+    }
+
+    virtual_ipaddress {
+        {{ virtual_ip }}
+    }
+}

@@ -1,0 +1,6 @@
+---
+- name: restart resolv service
+  service:
+    name: systemd-resolved
+    daemon-reload: true
+    state: restarted

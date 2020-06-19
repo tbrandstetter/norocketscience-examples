@@ -1,0 +1,7 @@
+---
+- import_playbook: os.yml
+- import_playbook: keepalived.yml
+- import_playbook: storage.yml
+- import_playbook: master.yml
+- import_playbook: worker.yml
+- import_playbook: deployments.yml

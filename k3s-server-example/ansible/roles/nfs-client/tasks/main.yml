@@ -1,0 +1,12 @@
+---
+- name: Install NFS client on Debian or Ubuntu
+  package:
+    name: nfs-common
+  when: ansible_distribution == "Debian" or
+        ansible_distribution == "Ubuntu"
+
+- name: Install NFS client on CentOS or RedHat
+  package:
+    name: nfs-utils
+  when: ansible_distribution == "CentOS" or
+        ansible_distribution == "RedHat"

@@ -1,0 +1,32 @@
+{% if groups['k3s_master'] | length >= 3 %}
+  {% if ansible_fqdn in groups['k3s_master'][0] %}
+    {% set master = "--cluster-init" %}
+  {% else %}
+    {% set master_ip = hostvars[groups['k3s_master'][0]]['ansible_default_ipv4']['address'] %}
+    {% set master = ("--server https://%s:6443" % (master_ip)) %}
+  {% endif %}
+{% elif k3s_master_type == "reset" %}
+  {% set master = "--cluster-reset" %}
+{% else %}
+  {% set master = "" %}
+{% endif %}
+
+[Unit]
+Description=K3S Server {{ k3s_version }}
+Documentation=https://k3s.io
+After=network-online.target
+[Service]
+ExecStartPre=-/sbin/modprobe br_netfilter
+ExecStartPre=-/sbin/modprobe overlay
+ExecStart=/usr/local/bin/k3s server {{ master }} --no-deploy traefik,local-storage --kube-apiserver-arg service-node-port-range=30000-52000 --token {{ k3s_cluster_secret }}
+KillMode=process
+Delegate=yes
+LimitNOFILE=infinity
+LimitNPROC=infinity
+LimitCORE=infinity
+TasksMax=infinity
+Restart=always
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

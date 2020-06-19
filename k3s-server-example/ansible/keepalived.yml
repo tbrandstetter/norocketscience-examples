@@ -1,0 +1,11 @@
+---
+- name: Prepare Ubuntu OS
+  hosts:
+    - k3s_master
+    - k3s_agents
+  remote_user: "{{ ssh_user }}"
+  become: true
+  become_user: root
+
+  roles:
+    - keepalived

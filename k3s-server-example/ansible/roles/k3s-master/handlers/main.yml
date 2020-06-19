@@ -1,0 +1,8 @@
+---
+- name: restart k3s server
+  systemd:
+    name: k3s-server
+    state: restarted
+    daemon_reload: true
+    enabled: yes
+  register: k3s_restart

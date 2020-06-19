@@ -1,0 +1,20 @@
+---
+- name: Install keepalived package
+  package:
+    name: keepalived
+
+- name: Install keepalived configuration
+  template:
+    src: "keepalived.conf.j2"
+    dest: "/etc/keepalived/keepalived.conf"
+    owner: root
+    group: root
+    mode: 0644
+  notify:
+    - restart keepalived
+
+- name: Enable and start the Keepalived service
+  systemd:
+    name: keepalived
+    state: started
+    enabled: yes

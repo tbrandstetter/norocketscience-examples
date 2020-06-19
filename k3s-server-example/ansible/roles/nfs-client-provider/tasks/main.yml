@@ -1,0 +1,24 @@
+---
+- name: Copy rbac and storage class definitions for NFS-Client provider
+  copy:
+    src: "{{ item }}"
+    dest: /tmp/deployment/
+  with_fileglob:
+    - files/*.yaml
+
+- name: Set NFS-Server IP
+  set_fact:
+    nfs_server: "{{ nfs_server }}"
+
+- name: Set os architecture
+  set_fact:
+    os_arch: "{{ ansible_architecture }}"
+
+- name: Copy deployment file for nfs-client provider
+  template:
+    src: templates/deployment.j2
+    dest: /tmp/deployment/deployment.yaml
+
+- name: Deploy NFS-Client provider to K3S cluster
+  command: kubectl apply -f /tmp/deployment
+  tags: ['skip_ansible_lint']

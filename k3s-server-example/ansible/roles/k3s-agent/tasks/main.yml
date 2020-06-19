@@ -1,0 +1,34 @@
+---
+- name: Download and install k3s binary (ARM)
+  get_url:
+    url: https://github.com/rancher/k3s/releases/download/{{ k3s_version }}/k3s-arm64
+    dest: /usr/local/bin/k3s
+    mode: a+x
+    force: true
+  when: ansible_architecture == "aarch64"
+
+- name: Download and install k3s binary (X64)
+  get_url:
+    url: https://github.com/rancher/k3s/releases/download/{{ k3s_version }}/k3s
+    dest: /usr/local/bin/k3s
+    mode: a+x
+    force: true
+  when: ansible_architecture == "x86_64"
+
+- name: Install k3s agent service
+  template:
+    src: "k3s-agent.service.j2"
+    dest: "/etc/systemd/system/k3s-agent.service"
+    owner: root
+    group: root
+    mode: 0644
+  notify:
+    - restart k3s agent
+
+- name: Copy uninstall script
+  copy:
+    src: files/k3s-agent-uninstall.sh
+    dest: /usr/local/sbin/k3s-agent-uninstall.sh
+    owner: root
+    group: root
+    mode: '0755'

@@ -1,0 +1,17 @@
+[Unit]
+Description=K3S Agent {{ k3s_version }}
+Documentation=https://k3s.io
+After=network-online.target
+[Service]
+ExecStart=/usr/local/bin/k3s agent -s https://{{ keepalived_ip_master }}:6443 --token {{ k3s_cluster_secret }}
+KillMode=process
+Delegate=yes
+LimitNOFILE=infinity
+LimitNPROC=infinity
+LimitCORE=infinity
+TasksMax=infinity
+Restart=always
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

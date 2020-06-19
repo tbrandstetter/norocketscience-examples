@@ -1,0 +1,38 @@
+---
+# https://www.raspberrypi.org/forums/viewtopic.php?t=214045
+- name: (Raspberry PI) Adapt network offloading settings
+  template:
+    src: "offloading.j2"
+    dest: "/usr/lib/networkd-dispatcher/routable.d/10-disable-offloading"
+    owner: root
+    group: root
+    mode: 0755
+
+- name: (Raspberry PI) Add Raspberry Support Repository
+  apt_repository:
+    repo: ppa:ubuntu-raspi2/ppa
+
+- name: (Raspberry PI) Install Raspberry support package
+  apt:
+    name: "{{ packages }}"
+    force_apt_get: true
+  vars:
+    packages:
+      - libraspberrypi-bin
+
+- name: (Raspberry PI) Set GPU memory split to 16 MB
+  lineinfile:
+    path: /boot/firmware/config.txt
+    line: "{{ item.line }}"
+    create: true
+    with_items:
+      - {line: 'gpu_mem=16'}
+      - {line: 'dtoverlay=disable-wifi'}
+      - {line: 'dtoverlay=disable-bt'}
+
+- name: (Raspberry PI) Add cgroup directives to boot commandline config
+  lineinfile:
+    path: /boot/firmware/cmdline.txt
+    regexp: '((.)+?)(\scgroup_\w+=\w+)*$'
+    line: '\1 cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory'
+    backrefs: true

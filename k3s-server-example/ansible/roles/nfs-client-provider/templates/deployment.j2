@@ -1,0 +1,42 @@
+{% set arch = "" %}
+
+{% if os_arch == "aarch64" %}
+  {% set arch = "-arm" %}
+{% endif %}
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nfs-client-provisioner
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+        app: nfs-client-provisioner
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: nfs-client-provisioner
+    spec:
+      serviceAccountName: nfs-client-provisioner
+      containers:
+        - name: nfs-client-provisioner
+          image: quay.io/external_storage/nfs-client-provisioner{{arch}}:v3.1.0-k8s1.11
+          volumeMounts:
+            - name: nfs-client-root
+              mountPath: /persistentvolumes
+          env:
+            - name: PROVISIONER_NAME
+              value: nfs-storage
+            - name: NFS_SERVER
+              value: {{ nfs_server }}
+            - name: NFS_PATH
+              value: /storage
+      volumes:
+        - name: nfs-client-root
+          nfs:
+            server: {{ nfs_server }}
+            path: /storage

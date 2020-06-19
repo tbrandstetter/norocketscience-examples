@@ -1,0 +1,83 @@
+---
+- name: Download and install k3s binary (ARM)
+  get_url:
+    url: https://github.com/rancher/k3s/releases/download/{{ k3s_version }}/k3s-arm64
+    dest: /usr/local/bin/k3s
+    mode: a+x
+  when: ansible_architecture == "aarch64"
+
+- name: Download and install k3s binary (X64)
+  get_url:
+    url: https://github.com/rancher/k3s/releases/download/{{ k3s_version }}/k3s
+    dest: /usr/local/bin/k3s
+    mode: a+x
+  when: ansible_architecture == "x86_64"
+
+- name: Create kubectl symlink
+  file:
+    src: /usr/local/bin/k3s
+    dest: /usr/local/bin/kubectl
+    state: link
+
+- name: Create crictl symlink
+  file:
+    src: /usr/local/bin/k3s
+    dest: /usr/local/bin/crictl
+    state: link
+
+- name: Install k3s server service
+  template:
+    src: "k3s-server.service.j2"
+    dest: "/etc/systemd/system/k3s-server.service"
+    owner: root
+    group: root
+    mode: 0644
+  notify:
+    - restart k3s server
+
+- name: Force all notified handlers to run at this point, not waiting for normal sync points
+  meta: flush_handlers
+
+# Wait 60 seconds to start up Kubernetes
+- name: Wait for Kubernetes to start
+  shell: |
+    set -o pipefail
+    kubectl get nodes --selector='node-role.kubernetes.io/master'|grep "Ready" | wc -l
+  args:
+    executable: /bin/bash
+  register: k3s_node
+  until: k3s_node.stdout == "1"
+  retries: 15
+  delay: 5
+  when: k3s_restart is defined and
+        k3s_restart is succeeded
+  tags: ['skip_ansible_lint']
+
+- debug:
+    var: k3s_node
+    verbosity: 2
+
+- name: Get Master Taint
+  shell: |
+    set -o pipefail
+    kubectl describe node {{ inventory_hostname }} | grep node-role.kubernetes.io/master=true:NoSchedule
+  # Debians default shell does not support pipefail
+  args:
+    executable: /bin/bash
+  register: kubernetes_master_taint
+  failed_when: kubernetes_master_taint.rc != 1 and kubernetes_master_taint.rc != 0
+  changed_when: false
+
+- name: Taint master node
+  command: kubectl taint nodes {{ inventory_hostname }} node-role.kubernetes.io/master=true:NoSchedule
+  when:
+    - not kubernetes_master_taint.stdout
+  ignore_errors: "{{ ansible_check_mode }}"
+
+- name: Copy uninstall script
+  copy:
+    src: files/k3s-uninstall.sh
+    dest: /usr/local/sbin/k3s-uninstall.sh
+    owner: root
+    group: root
+    mode: '0755'

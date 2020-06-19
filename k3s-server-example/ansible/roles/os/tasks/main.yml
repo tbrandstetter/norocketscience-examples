@@ -1,0 +1,106 @@
+---
+- name: Remove original resolv.conf
+  file:
+    path: /etc/resolv.conf
+    state: absent
+  changed_when: False
+  when: not run_in_container
+
+- name: Switch to alternate resolv.conf
+  file:
+    src: /run/systemd/resolve/resolv.conf
+    dest: /etc/resolv.conf
+    owner: root
+    group: root
+    state: link
+  changed_when: False
+  notify:
+    - restart resolv service
+  when: not run_in_container
+
+- name: Start resolv service
+  service:
+    name: systemd-resolved
+    enabled: true
+    state: started
+  when: not run_in_container
+
+- name: Set hostname to inventory hostname
+  hostname:
+    name: "{{ inventory_hostname }}"
+  when: not run_in_container
+
+- name: add hostname to /etc/hosts
+  lineinfile:
+    path: /etc/hosts
+    regexp: '^127\.0\.1\.1'
+    line: "{{ ansible_host }} {{ inventory_hostname }}"
+    owner: root
+    group: root
+    mode: '0644'
+  changed_when: False
+  when: not run_in_container
+
+- name: Disable Swap
+  command: /sbin/swapoff -a
+  changed_when: False
+  when: not run_in_container
+
+- name: Mount /tmp in tmpfs
+  mount:
+    path: /tmp
+    src: tmpfs
+    fstype: tmpfs
+    state: mounted
+  when: not run_in_container
+
+- name: Set timezone to Europe/Vienna
+  timezone:
+    name: Europe/Vienna
+
+- name: Install ntp service
+  package:
+    name:
+      - ntp
+  when: ansible_distribution == "Debian" or
+        ansible_distribution == "Ubuntu"
+
+- name: Start ntp service
+  service:
+    name: ntp
+    enabled: true
+    state: started
+  when: ansible_distribution == "Debian" or
+        ansible_distribution == "Ubuntu"
+
+- name: Import arm64 (RaspberryPI) specific tasks
+  include_tasks: RaspberryPi.yml
+  when: ansible_architecture == "aarch64"
+
+- name: Install CentOS specific packages
+  package:
+    name:
+      - epel-release
+  when: ansible_distribution == "CentOS" or
+        ansible_distribution == "RedHat"
+
+- name: Install a list of packages
+  package:
+    name:
+      - jq
+      - git
+
+- name: Remove useless packages from the cache
+  apt:
+    autoclean: true
+  when: ansible_distribution == "Debian" or
+        ansible_distribution == "Ubuntu"
+
+- name: Check if reboot is required
+  stat:
+    path: /var/run/reboot-required
+  register: reboot_required_file
+
+- name: Reboot the node
+  reboot:
+  when: reboot_required_file.stat.exists

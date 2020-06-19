@@ -1,0 +1,16 @@
+---
+- name: Deploy kubernetes system services
+  hosts: k3s_master[0]
+  #serial: "{{ serial_number|default(1) }}"
+  remote_user: "{{ ssh_user }}"
+  become: true
+  become_user: root
+
+  tasks:
+    - name: Recursively remove old deployment directory
+      file:
+        path: /tmp/deployment
+        state: absent
+
+  roles:
+    - nfs-client-provider
