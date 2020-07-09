@@ -10,7 +10,7 @@ k3s_master_type: single
 k3s_version: v1.17.5+k3s1
 k3s_cluster_secret: 1234567890123456789012345678901234567890123
 keepalived_ip_master: "{{ groups['k3s_master'] | map('extract',hostvars,'ansible_host') | first }}"
-keepalived_ip_agent: "{{ groups['k3s_agent'] | map('extract',hostvars,'ansible_host') | first }}"
+keepalived_ip_agent: "{{ groups['k3s_agents'] | map('extract',hostvars,'ansible_host') | first }}"
 keepalived_router_id_master: 110
 keepalived_router_id_agent: 210
 nfs_server: "{{ groups['storage'] | map('extract',hostvars,'ansible_host') | first }}"
