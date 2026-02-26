@@ -1,0 +1,21 @@
+services:
+  image-factory:
+    image: "ghcr.io/siderolabs/image-factory:v1.0.0-beta.0"
+    restart: unless-stopped
+    container_name: image-factory
+    ports:
+      - "9443:8080"
+    volumes:
+      - $HOME/.docker/config.json:/.docker/config.json
+      - ./env.yaml:/env.yaml
+      - ./pcr-signing-key.pem:/pcr-signing-key.pem
+      - ./uki-signing-key.pem:/uki-signing-key.pem
+      - ./uki-signing-cert.pem:/uki-signing-cert.pem
+      - ./signing-key.key:/signing-key.key
+      - ./cosign.pub:/cosign.pub
+      # CA cert for Habor verification
+      - ./ca.crt:/etc/pki/tls/cacert.pem
+      - /data/cert/registry.mgmt.lab.internal.key:/certs/server-key.pem
+      - /data/cert/registry.mgmt.lab.internal.crt:/certs/server-chain.pem
+    command: 
+      --config env.yaml
